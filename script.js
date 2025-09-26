@@ -50,6 +50,7 @@ const loadingObserver = new IntersectionObserver(
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         entry.target.style.opacity = "1";
+        entry.target.style.transform = "none";
         observer.unobserve(entry.target);
       }
     });

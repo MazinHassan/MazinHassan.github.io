@@ -70,7 +70,10 @@ a {
 
 .gallery-item {
   opacity: 0;
-  transition: opacity 300ms;
+  transform: translateY(20px);
+  transition:
+    transform 300ms ease-out,
+    opacity 300ms ease-out;
 }
 
 .gallery-media {
