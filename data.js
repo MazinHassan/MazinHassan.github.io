@@ -5,7 +5,7 @@ const data = {
     last_name: "Hassan",
     description:
       "Freelance Illustrator<br> Concept Artist<br> Character Designer<br> Storyboard Artist",
-    image: "./gallery/trio.jpg",
+    image: "./gallery/by the shore.png",
     contacts: [
       {
         link: "https://twitter.com/RinkaRii_",
@@ -21,7 +21,16 @@ const data = {
       },
     ],
   },
-  gallery: [ {
+  gallery: [  {
+      media: "./gallery/trio.jpg",
+      description: "",
+    }, {
+      media: "./gallery/ye.png",
+      description: "",
+    }, {
+      media: "./gallery/tired of feeling this way.png",
+      description: "",
+    },{
       media: "./gallery/sno.jpg",
       description: "",
     },   {
