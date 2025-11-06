@@ -4,7 +4,7 @@ const data = {
     first_name: "Mazin",
     last_name: "Hassan",
     description:
-      "Freelance Illustrator Concept Artist Character Designer Storyboard Artist",
+      "Freelance Illustrator<br> Concept Artist<br> Character Designer<br> Storyboard Artist",
     image: "./gallery/ddddddddddoodles.png",
     contacts: [
       {
@@ -21,7 +21,10 @@ const data = {
       },
     ],
   },
-  gallery: [
+  gallery: [    {
+      media: "./gallery/cover.jpg",
+      description: "",
+    },
     {
       media: "./gallery/biscuit commish.png",
       description: "",
