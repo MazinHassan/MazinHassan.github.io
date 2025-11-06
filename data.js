@@ -21,7 +21,13 @@ const data = {
       },
     ],
   },
-  gallery: [    {
+  gallery: [ {
+      media: "./gallery/sno.jpg",
+      description: "",
+    },{
+      media: "./gallery/trio.jpg",
+      description: "",
+    },   {
       media: "./gallery/cover.jpg",
       description: "",
     },
