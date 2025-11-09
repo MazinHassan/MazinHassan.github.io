@@ -19,4 +19,8 @@ const pages = [
     src: "./pages/page 5.jpg",
     background: "#ffffff",
   },
+  {
+    src: "./pages/page 6.jpg",
+    background: "#000000ff",
+  },
 ];
