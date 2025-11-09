@@ -35,6 +35,10 @@ const data = {
       description: "",
     },
     {
+      media: "gallery/lollllll.png",
+      description: "",
+    },
+    {
       media: "./gallery/sno.jpg",
       description: "",
     },
