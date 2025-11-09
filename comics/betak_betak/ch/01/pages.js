@@ -1,5 +1,13 @@
 const pages = [
   {
+    src: "./pages/cover.jpg",
+    background: "#ffffffff",
+  },
+  {
+    src: "./pages/page 0.jpg",
+    background: "#ffffffff",
+  },
+  {
     src: "./pages/page 1.jpg",
     background: "#000000",
   },
