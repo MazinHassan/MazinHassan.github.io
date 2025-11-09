@@ -8,6 +8,10 @@ const pages = [
     background: "#ffffffff",
   },
   {
+    src: "./pages/LOADING.jpg",
+    background: "#ffffffff",
+  },
+  {
     src: "./pages/page 1.jpg",
     background: "#000000",
   },
