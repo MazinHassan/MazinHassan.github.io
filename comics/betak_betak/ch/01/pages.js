@@ -5,7 +5,7 @@ const pages = [
   },
   {
     src: "./pages/page 2.jpg",
-    background: "#134659",
+    background: "#ffffffff",
   },
   {
     src: "./pages/page 3.jpg",
