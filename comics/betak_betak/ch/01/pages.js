@@ -1,26 +1,22 @@
 const pages = [
   {
-    src: "./pages/01.jpg",
+    src: "./pages/page 1.jpg",
     background: "#000000",
   },
   {
-    src: "./pages/02.jpg",
+    src: "./pages/page 2.jpg",
     background: "#134659",
   },
   {
-    src: "./pages/03.jpg",
+    src: "./pages/page 3.jpg",
     background: "#ffffff",
   },
   {
-    src: "./pages/04.jpg",
+    src: "./pages/page 4.jpg",
     background: "#ffffff",
   },
   {
-    src: "./pages/05.jpg",
-    background: "#ffffff",
-  },
-  {
-    src: "./pages/06.jpg",
+    src: "./pages/page 5.jpg",
     background: "#ffffff",
   },
 ];
