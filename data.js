@@ -20,6 +20,11 @@ const data = {
         body: '<i class="fa-solid fa-envelope"></i>',
       },
     ],
+    featured: {
+      url: "comics/betak_betak",
+      img: "./gallery/betak_betak_logo.png",
+      title: "Read Betak Betak",
+    },
   },
   gallery: [
     {

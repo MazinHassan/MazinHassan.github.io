@@ -5,6 +5,7 @@ const heroContent = document.querySelector(".hero-content");
 const heroName = document.querySelector(".hero-name");
 const heroDescription = document.querySelector(".hero-description");
 const heroContacts = document.querySelector(".hero-contacts");
+const heroFeatured = document.querySelector(".hero-featured");
 const gallery = document.querySelector(".gallery");
 
 hero.style.backgroundImage = `url('${data.hero.image}')`;
@@ -13,6 +14,14 @@ heroDescription.innerHTML = data.hero.description;
 heroContacts.innerHTML = data.hero.contacts
   .map((c) => `<a href="${c.link}">${c.body}</a>`)
   .join("");
+heroFeatured.innerHTML = `
+	<a href="${data.hero.featured.url}">
+		<div>
+			<img src="${data.hero.featured.img}" width="100%">
+			<p>${data.hero.featured.title}<p>
+		</div>
+	</a>
+  `;
 
 const heroObserver = new IntersectionObserver(
   (entries) => {

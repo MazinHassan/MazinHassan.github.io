@@ -59,6 +59,11 @@ a {
   mix-blend-mode: difference;
 }
 
+.hero-featured {
+  margin-top: 2rem;
+  text-align: center;
+}
+
 .gallery {
   padding: 25px;
   padding-left: 350px;
