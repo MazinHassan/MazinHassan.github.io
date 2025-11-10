@@ -4,7 +4,7 @@ const pages = [
     background: "#ffffffff",
   },
   {
-    src: "./pages/page 0.jpg",
+    src: "./pages/page_0.jpg",
     background: "#ffffffff",
   },
   {
@@ -12,27 +12,27 @@ const pages = [
     background: "#ffffffff",
   },
   {
-    src: "./pages/page 1.jpg",
+    src: "./pages/page_1.jpg",
     background: "#000000",
   },
   {
-    src: "./pages/page 2.jpg",
+    src: "./pages/page_2.jpg",
     background: "#ffffffff",
   },
   {
-    src: "./pages/page 3.jpg",
+    src: "./pages/page_3.jpg",
     background: "#ffffff",
   },
   {
-    src: "./pages/page 4.jpg",
+    src: "./pages/page_4.jpg",
     background: "#ffffff",
   },
   {
-    src: "./pages/page 5.jpg",
+    src: "./pages/page_5.jpg",
     background: "#ffffff",
   },
   {
-    src: "./pages/page 6.jpg",
+    src: "./pages/page_6.jpg",
     background: "#000000ff",
   },
 ];
