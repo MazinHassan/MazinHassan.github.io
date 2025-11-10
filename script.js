@@ -70,3 +70,15 @@ const loadingObserver = new IntersectionObserver(
 for (const child of gallery.children) {
   loadingObserver.observe(child);
 }
+
+document.addEventListener("contextmenu", (e) => {
+  if (e.target.tagName === "IMG") {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("touchstart", (e) => {
+  if (e.target.tagName === "IMG") {
+    e.preventDefault();
+  }
+});

@@ -493,3 +493,15 @@ document.addEventListener("keydown", (e) => {
       break;
   }
 });
+
+document.addEventListener("contextmenu", (e) => {
+  if (e.target.tagName === "IMG") {
+    e.preventDefault();
+  }
+});
+
+document.addEventListener("touchstart", (e) => {
+  if (e.target.tagName === "IMG") {
+    e.preventDefault();
+  }
+});
