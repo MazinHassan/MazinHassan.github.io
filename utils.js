@@ -30,8 +30,39 @@ export class Vec2 {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
+  distance(other) {
+    return this.sub(other).length();
+  }
+
+  min() {
+    return Math.min(this.x, this.y);
+  }
+
   copy() {
     return new Vec2(this.x, this.y);
+  }
+
+  static zero() {
+    return new Vec2(0, 0);
+  }
+
+  static fromClient(obj) {
+    return new Vec2(obj.clientX, obj.clientY);
+  }
+}
+
+export class Rect {
+  constructor(x, y, w, h) {
+    this.position = new Vec2(x, y);
+    this.size = new Vec2(w, h);
+  }
+
+  center() {
+    return this.position.add(this.size.div(2));
+  }
+
+  static fromDomRect(rect) {
+    return new Rect(rect.left, rect.top, rect.width, rect.height);
   }
 }
 
@@ -45,11 +76,11 @@ export class Transform {
     return new Transform(this.translate.copy(), this.scale);
   }
 
-  static default() {
-    return new Transform(new Vec2(0, 0), 1);
-  }
-
   toStyle() {
     return `translate(${this.translate.x}px, ${this.translate.y}px) scale(${this.scale})`;
+  }
+
+  static default() {
+    return new Transform(Vec2.zero(), 1);
   }
 }

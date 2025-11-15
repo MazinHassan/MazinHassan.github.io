@@ -1,6 +1,6 @@
 "use strict";
 
-import { Vec2, Transform } from "./utils.js";
+import { Vec2, Transform, Rect } from "./utils.js";
 
 document.title = data.title;
 
@@ -51,9 +51,10 @@ const galleryItems = data.gallery.map((i) => {
   mediaElement.loading = "lazy";
 
   mediaElement.addEventListener("click", (e) => {
-    const rect = e.target.getBoundingClientRect();
-    preview(i.media, rect.left, rect.top, rect.width, rect.height);
-    e.target.classList.add("hide");
+    if (!previewOpen) {
+      preview(i.media, Rect.fromDomRect(e.target.getBoundingClientRect()));
+      e.target.classList.add("hide");
+    }
   });
 
   const description = document.createElement("p");
@@ -90,27 +91,21 @@ for (const child of gallery.children) {
   loadingObserver.observe(child);
 }
 
-function preview(src, x, y, w, h) {
-  if (document.querySelector(".preview-container") !== null) {
+let previewOpen = false;
+
+function preview(src, rect) {
+  if (previewOpen) {
     return;
   }
+  previewOpen = true;
 
   let media = null;
 
   if (/\.(mp4|mov|avi|webm|mkv)$/i.test(src)) {
     media = document.createElement("video");
-
     const source = document.createElement("source");
     source.src = src;
-
     media.appendChild(source);
-    media.addEventListener("mouseenter", function () {
-      this.setAttribute("controls", "controls");
-    });
-
-    media.addEventListener("mouseleave", function () {
-      this.removeAttribute("controls");
-    });
   } else {
     media = document.createElement("img");
     media.src = src;
@@ -120,7 +115,7 @@ function preview(src, x, y, w, h) {
   media.classList.add("preview-media", "no-transition");
 
   requestAnimationFrame(() => {
-    const mediaRatio = w / h;
+    const mediaRatio = rect.size.x / rect.size.y;
     const windowRatio = window.innerWidth / window.innerHeight;
 
     if (mediaRatio > windowRatio) {
@@ -129,16 +124,12 @@ function preview(src, x, y, w, h) {
       media.style.height = "100%";
     }
 
-    const rect = media.getBoundingClientRect();
+    const mediaRect = Rect.fromDomRect(media.getBoundingClientRect());
 
-    const thumbCenter = new Vec2(x + w / 2, y + h / 2);
-    const mediaCenter = new Vec2(
-      rect.left + rect.width / 2,
-      rect.top + rect.height / 2,
+    const transform = new Transform(
+      rect.center().sub(mediaRect.center()),
+      rect.size.div(mediaRect.size).min(),
     );
-    const thumScale = Math.min(w / rect.width, h / rect.height);
-
-    const transform = new Transform(thumbCenter.sub(mediaCenter), thumScale);
 
     media.style.transform = transform.toStyle();
     media.dataset.initialTransform = transform.toStyle();
@@ -149,25 +140,61 @@ function preview(src, x, y, w, h) {
     });
   });
 
-  let transform = Transform.default();
-  let start = new Vec2(0, 0);
-  let isDragging = false;
+  const backdrop = document.createElement("div");
+  backdrop.className = "preview-backdrop";
+  backdrop.style.opacity = 0;
+  requestAnimationFrame(() => {
+    backdrop.style.opacity = 0.5;
+  });
 
-  media.addEventListener("mousedown", (e) => {
+  backdrop.addEventListener("click", () => {
+    closePreview();
+  });
+
+  const container = document.createElement("div");
+  container.className = "preview-container";
+
+  container.appendChild(media);
+  container.appendChild(backdrop);
+
+  let transform = Transform.default();
+  let start = Vec2.zero();
+  let isDragging = false;
+  let pinch = {
+    distance: 0,
+    midpoint: Vec2.zero(),
+    transform: Transform.default(),
+  };
+  let prevTapTime = 0;
+  let prevTapPos = Vec2.zero();
+
+  container.addEventListener("mousedown", (e) => {
+    if (!previewOpen) {
+      return;
+    }
+
     e.preventDefault();
-    start = new Vec2(e.clientX, e.clientY).sub(transform.translate);
+    start = Vec2.fromClient(e).sub(transform.translate);
     isDragging = true;
     media.classList.add("no-transition");
   });
 
-  media.addEventListener("mousemove", (e) => {
+  container.addEventListener("mousemove", (e) => {
+    if (!previewOpen) {
+      return;
+    }
+
     if (isDragging) {
-      transform.translate = new Vec2(e.clientX, e.clientY).sub(start);
+      transform.translate = Vec2.fromClient(e).sub(start);
       media.style.transform = transform.toStyle();
     }
   });
 
-  media.addEventListener("mouseup", () => {
+  container.addEventListener("mouseup", () => {
+    if (!previewOpen) {
+      return;
+    }
+
     isDragging = false;
     media.classList.remove("no-transition");
 
@@ -184,19 +211,20 @@ function preview(src, x, y, w, h) {
     }
   });
 
-  media.addEventListener("dblclick", (e) => {
+  container.addEventListener("dblclick", (e) => {
+    if (!previewOpen) {
+      return;
+    }
+
     e.preventDefault();
 
     if (transform.scale !== 1) {
       transform = Transform.default();
     } else {
-      const newScale = transform.scale * 2;
-      const rect = container.getBoundingClientRect();
+      const rect = Rect.fromDomRect(container.getBoundingClientRect());
+      const focus = Vec2.fromClient(e).sub(rect.center());
 
-      const focus = new Vec2(
-        e.clientX - rect.left - rect.width / 2,
-        e.clientY - rect.top - rect.height / 2,
-      );
+      const newScale = transform.scale * 2;
 
       transform.translate = transform.translate.sub(
         focus.sub(transform.translate).mul(newScale / transform.scale - 1),
@@ -207,32 +235,40 @@ function preview(src, x, y, w, h) {
     media.style.transform = transform.toStyle();
   });
 
-  media.addEventListener("wheel", (e) => {
+  let wheelTimeout = null;
+  container.addEventListener("wheel", (e) => {
+    if (!previewOpen) {
+      return;
+    }
+
     e.preventDefault();
 
     const dir = e.deltaY < 0 ? 1 : -1;
-    const newScale = Math.max(1, Math.min(5, transform.scale + dir * 0.1));
+    const newScale = Math.max(0.1, Math.min(5, transform.scale + dir * 0.1));
 
-    if (newScale > 1) {
-      const rect = container.getBoundingClientRect();
-
-      const focus = new Vec2(
-        e.clientX - rect.left - rect.width / 2,
-        e.clientY - rect.top - rect.height / 2,
-      );
-
-      transform.translate = transform.translate.sub(
-        focus.sub(transform.translate).mul(newScale / transform.scale - 1),
-      );
-      transform.scale = newScale;
-    } else {
-      transform = Transform.default();
-    }
+    const rect = Rect.fromDomRect(container.getBoundingClientRect());
+    const focus = Vec2.fromClient(e).sub(rect.center());
+    transform.translate = transform.translate.sub(
+      focus.sub(transform.translate).mul(newScale / transform.scale - 1),
+    );
+    transform.scale = newScale;
 
     media.style.transform = transform.toStyle();
+
+    clearTimeout(wheelTimeout);
+    wheelTimeout = setTimeout(() => {
+      if (transform.scale < 1) {
+        transform = Transform.default();
+        media.style.transform = transform.toStyle();
+      }
+    }, 100);
   });
 
   document.addEventListener("mouseleave", () => {
+    if (!previewOpen) {
+      return;
+    }
+
     isDragging = false;
     media.classList.remove("no-transition");
     if (transform.scale === 1) {
@@ -241,71 +277,48 @@ function preview(src, x, y, w, h) {
     media.style.transform = transform.toStyle();
   });
 
-  let pinch = {
-    distance: 0,
-    midpoint: new Vec2(0, 0),
-    transform: new Transform(new Vec2(0, 0), 0),
-  };
+  container.addEventListener("touchstart", (e) => {
+    if (!previewOpen) {
+      return;
+    }
 
-  media.addEventListener("touchstart", (e) => {
     e.preventDefault();
 
     media.classList.add("no-transition");
 
     if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      start.x = touch.clientX - transform.translate.x;
-      start.y = touch.clientY - transform.translate.y;
+      start = Vec2.fromClient(e.touches[0]).sub(transform.translate);
     } else if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-
+      const touch1 = Vec2.fromClient(e.touches[0]);
+      const touch2 = Vec2.fromClient(e.touches[1]);
       pinch = {
-        distance: distance(
-          touch1.clientX,
-          touch1.clientY,
-          touch2.clientX,
-          touch2.clientY,
-        ),
+        distance: touch1.distance(touch2),
         transform: transform.copy(),
-        midpoint: new Vec2(
-          (touch1.clientX + touch2.clientX) / 2,
-          (touch1.clientY + touch2.clientY) / 2,
-        ),
+        midpoint: touch1.add(touch2).div(2),
       };
     }
   });
 
-  media.addEventListener("touchmove", (e) => {
+  container.addEventListener("touchmove", (e) => {
+    if (!previewOpen) {
+      return;
+    }
+
     if (e.touches.length === 1) {
-      transform.translate = new Vec2(
-        e.touches[0].clientX - start.x,
-        e.touches[0].clientY - start.y,
-      );
+      transform.translate = Vec2.fromClient(e.touches[0]).sub(start);
     } else if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
+      const touch1 = Vec2.fromClient(e.touches[0]);
+      const touch2 = Vec2.fromClient(e.touches[1]);
 
-      const dist = distance(
-        touch1.clientX,
-        touch1.clientY,
-        touch2.clientX,
-        touch2.clientY,
-      );
+      const rect = Rect.fromDomRect(container.getBoundingClientRect());
+      const focus = pinch.midpoint.sub(rect.center());
 
-      const midpoint = new Vec2(
-        (touch1.clientX + touch2.clientX) / 2,
-        (touch1.clientY + touch2.clientY) / 2,
-      );
+      const dist = touch1.distance(touch2);
+      const midpoint = touch1.add(touch2).div(2);
 
       const newScale = Math.min(
         5,
         pinch.transform.scale * (dist / pinch.distance),
-      );
-      const rect = container.getBoundingClientRect();
-      const focus = new Vec2(
-        pinch.midpoint.x - rect.left - rect.width / 2,
-        pinch.midpoint.y - rect.top - rect.height / 2,
       );
 
       transform.translate = pinch.transform.translate
@@ -315,29 +328,25 @@ function preview(src, x, y, w, h) {
             .sub(pinch.transform.translate)
             .mul(newScale / pinch.transform.scale - 1),
         );
-
       transform.scale = newScale;
     }
 
     media.style.transform = transform.toStyle();
   });
 
-  let prevTap = 0;
-  const lastTapPos = new Vec2(0, 0);
+  container.addEventListener("touchend", (e) => {
+    if (!previewOpen) {
+      return;
+    }
 
-  media.addEventListener("touchend", (e) => {
     if (e.changedTouches.length === 1) {
-      const touch = e.changedTouches[0];
+      const touch = Vec2.fromClient(e.changedTouches[0]);
+      const dist = Math.abs(touch.distance(prevTapPos));
+      prevTapPos = touch;
 
       const currentTime = new Date().getTime();
-      const tapLength = currentTime - prevTap;
-      const distanceX = Math.abs(touch.clientX - lastTapPos.x);
-      const distanceY = Math.abs(touch.clientY - lastTapPos.y);
-      const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-
-      prevTap = currentTime;
-      lastTapPos.x = touch.clientX;
-      lastTapPos.y = touch.clientY;
+      const tapLength = currentTime - prevTapTime;
+      prevTapTime = currentTime;
 
       if (transform.scale === 1) {
         media.classList.remove("no-transition");
@@ -351,14 +360,11 @@ function preview(src, x, y, w, h) {
           transform = Transform.default();
           media.style.transform = transform.toStyle();
 
-          if (tapLength < 200 && distance < 50) {
-            const newScale = transform.scale * 2;
-            const rect = container.getBoundingClientRect();
+          if (tapLength < 200 && dist < 50) {
+            const rect = Rect.fromDomRect(container.getBoundingClientRect());
+            const focus = touch.sub(rect.center());
 
-            const focus = new Vec2(
-              touch.clientX - rect.left - rect.width / 2,
-              touch.clientY - rect.top - rect.height / 2,
-            );
+            const newScale = transform.scale * 2;
 
             transform.translate = transform.translate.sub(
               focus
@@ -369,7 +375,7 @@ function preview(src, x, y, w, h) {
 
             media.style.transform = transform.toStyle();
 
-            prevTap = 0;
+            prevTapTime = 0;
           }
         }
       } else if (transform.scale < 1) {
@@ -377,91 +383,52 @@ function preview(src, x, y, w, h) {
         transform = Transform.default();
         media.style.transform = transform.toStyle();
       } else if (transform.scale > 1) {
-        if (tapLength < 200 && distance < 50) {
+        if (tapLength < 200 && dist < 50) {
           media.classList.remove("no-transition");
           transform = Transform.default();
           media.style.transform = transform.toStyle();
-          prevTap = 0;
+          prevTapTime = 0;
         }
       }
     }
 
     if (e.touches.length === 1) {
-      const touch = e.touches[0];
-      start = new Vec2(
-        touch.clientX - transform.translate.x,
-        touch.clientY - transform.translate.y,
-      );
+      start = Vec2.fromClient(e.touches[0]).sub(transform.translate);
     }
-  });
-
-  const backdrop = document.createElement("div");
-  backdrop.className = "preview-backdrop";
-  backdrop.style.opacity = 0;
-  requestAnimationFrame(() => {
-    backdrop.style.opacity = 0.5;
-  });
-
-  backdrop.addEventListener("click", () => {
-    closePreview();
-  });
-
-  backdrop.addEventListener("touchend", (e) => {
-    if (e.changedTouches.length === 1) {
-      closePreview();
-    }
-  });
-
-  const container = document.createElement("div");
-  container.className = "preview-container";
-
-  container.appendChild(media);
-  container.appendChild(backdrop);
-
-  container.addEventListener("wheel", (e) => {
-    e.preventDefault();
-  });
-
-  container.addEventListener("touchstart", (e) => {
-    e.preventDefault();
-  });
-
-  container.addEventListener("touchmove", (e) => {
-    e.preventDefault();
-  });
-
-  container.addEventListener("touchend", (e) => {
-    e.preventDefault();
   });
 
   document.body.appendChild(container);
 }
 
 function closePreview() {
-  const container = document.querySelector(".preview-container");
+  if (previewOpen) {
+    previewOpen = false;
 
-  if (container) {
-    const media = container.querySelector(".preview-media");
-    const backdrop = container.querySelector(".preview-backdrop");
-    const hidden = document.querySelector(".hide");
+    const container = document.querySelector(".preview-container");
 
-    if (media) {
-      media.style.transform = media.dataset.initialTransform;
-    }
+    if (container) {
+      const media = container.querySelector(".preview-media");
+      const backdrop = container.querySelector(".preview-backdrop");
+      const hidden = document.querySelector(".hide");
 
-    if (backdrop) {
-      backdrop.style.opacity = "0";
-    }
+      if (media) {
+        media.style.transform = media.dataset.initialTransform;
+      }
 
-    if (hidden) {
+      if (backdrop) {
+        backdrop.style.opacity = "0";
+      }
+
+      if (hidden) {
+        setTimeout(() => {
+          hidden.classList.remove("hide");
+        }, 300);
+      }
+
       setTimeout(() => {
-        hidden.classList.remove("hide");
+        container.remove();
       }, 300);
     }
-
-    setTimeout(() => {
-      container.remove();
-    }, 300);
   }
 }
 
@@ -476,7 +443,3 @@ document.addEventListener("touchstart", (e) => {
     e.preventDefault();
   }
 });
-
-function distance(x1, y1, x2, y2) {
-  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-}
