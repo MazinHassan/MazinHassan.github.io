@@ -103,8 +103,16 @@ function preview(src, rect) {
 
   if (/\.(mp4|mov|avi|webm|mkv)$/i.test(src)) {
     media = document.createElement("video");
+    media.addEventListener("mouseenter", (e) => {
+      e.target.setAttribute("controls", "controls");
+    });
+    media.addEventListener("mouseleave", () => {
+      e.target.removeAttribute("controls");
+    });
+
     const source = document.createElement("source");
     source.src = src;
+
     media.appendChild(source);
   } else {
     media = document.createElement("img");
