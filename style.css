@@ -65,9 +65,17 @@ a {
 }
 
 .gallery {
+  width: 100%;
   padding: 25px;
   padding-left: 350px;
-  width: 100%;
+}
+
+.gallery-section-header {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.gallery-section-items {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-gap: 25px;

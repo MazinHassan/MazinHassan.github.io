@@ -42,38 +42,6 @@ const heroObserver = new IntersectionObserver(
 
 heroObserver.observe(hero);
 
-const fragment = document.createDocumentFragment();
-
-const galleryItems = data.gallery.map((i) => {
-  let mediaElement = document.createElement("img");
-  mediaElement.className = "gallery-media";
-  mediaElement.src = `./thumbnails/${i.media.split("/").pop().split(".").slice(0, -1).join(".")}.jpg`;
-  mediaElement.loading = "lazy";
-
-  mediaElement.addEventListener("click", (e) => {
-    if (!previewOpen) {
-      preview(i.media, Rect.fromDomRect(e.target.getBoundingClientRect()));
-      e.target.classList.add("hide");
-    }
-  });
-
-  const description = document.createElement("p");
-  description.innerText = i.description;
-
-  const item = document.createElement("div");
-  item.className = "gallery-item";
-  item.appendChild(mediaElement);
-  item.appendChild(description);
-
-  return item;
-});
-
-for (const item of galleryItems) {
-  fragment.appendChild(item);
-}
-
-gallery.appendChild(fragment);
-
 const loadingObserver = new IntersectionObserver(
   (entries, observer) => {
     entries.forEach((entry) => {
@@ -87,9 +55,59 @@ const loadingObserver = new IntersectionObserver(
   { threshold: 0.1 },
 );
 
-for (const child of gallery.children) {
-  loadingObserver.observe(child);
+const fragment = document.createDocumentFragment();
+
+const sections = Object.entries(data.gallery).map(([key, value]) => {
+  const mediaItems = value.map((i) => {
+    let thumbnail = document.createElement("img");
+    thumbnail.className = "gallery-media";
+    thumbnail.src = `./thumbnails/${i.media.split("/").pop().split(".").slice(0, -1).join(".")}.jpg`;
+    thumbnail.loading = "lazy";
+
+    thumbnail.addEventListener("click", (e) => {
+      if (!previewOpen) {
+        preview(i.media, Rect.fromDomRect(e.target.getBoundingClientRect()));
+        e.target.classList.add("hide");
+      }
+    });
+
+    const description = document.createElement("p");
+    description.innerText = i.description;
+
+    const item = document.createElement("div");
+    item.className = "gallery-item";
+    item.appendChild(thumbnail);
+    item.appendChild(description);
+
+    loadingObserver.observe(item);
+
+    return item;
+  });
+
+  const section = document.createElement("section");
+  section.id = key;
+  section.className = "gallery-section";
+
+  if (key !== "uncategorized") {
+    const header = document.createElement("h1");
+    header.innerHTML = key;
+    header.className = "gallery-section-header";
+    section.appendChild(header);
+  }
+
+  const items = document.createElement("div");
+  items.className = "gallery-section-items";
+  items.append(...mediaItems);
+  section.appendChild(items);
+
+  return section;
+});
+
+for (const section of sections) {
+  fragment.appendChild(section);
 }
+
+gallery.appendChild(fragment);
 
 let previewOpen = false;
 
