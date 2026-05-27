@@ -1,507 +1,457 @@
-"use strict";
+import { Vec2, Transform, Rect } from "./../../utils.js";
+
+const directionModifier =
+	data.direction === "ltr" ? 1 : data.direction === "rtl" ? -1 : 1;
 
 class Page {
-  constructor(src, background) {
-    this.background = background;
-    this.transform = {
-      scale: 1,
-      translate: { x: window.innerWidth, y: 0 },
-    };
+	constructor(src, background, transform) {
+		this.background = background;
+		this.transform = transform;
 
-    this.img = new Image();
-    this.img.src = src;
-    this.img.className = "image";
-    this.img.addEventListener("transitionend", (e) => {
-      const rect = e.target.getBoundingClientRect();
-      if (
-        rect.bottom <= 0 ||
-        rect.top >= window.innerHeight ||
-        rect.right <= 0 ||
-        rect.left >= window.innerWidth
-      ) {
-        e.target.remove();
-      }
-    });
+		this.element = new Image();
+		this.element.src = src;
+		this.element.className = "image";
+		this.element.addEventListener("transitionend", (e) => {
+			const rect = e.target.getBoundingClientRect();
+			if (
+				rect.bottom <= 0 ||
+				rect.top >= window.innerHeight ||
+				rect.right <= 0 ||
+				rect.left >= window.innerWidth
+			) {
+				e.target.remove();
+			}
+		});
 
-    this.updateStyleTransform();
-  }
+		this.updateStyleTransform();
+	}
 
-  translate(x, y) {
-    this.transform.translate.x = x;
-    this.transform.translate.y = y;
-    this.updateStyleTransform();
-  }
+	translate(pos) {
+		this.transform.translate = pos;
+		this.updateStyleTransform();
+	}
 
-  scale(s) {
-    this.transform.scale = s;
-    this.updateStyleTransform();
-  }
+	translateX(x) {
+		this.transform.translate.x = x;
+		this.updateStyleTransform();
+	}
 
-  updateStyleTransform() {
-    this.img.style.transform = `translate(${this.transform.translate.x}px, ${this.transform.translate.y}px) scale(${this.transform.scale})`;
-  }
+	translateY(y) {
+		this.transform.translate.y = y;
+		this.updateStyleTransform();
+	}
+
+	scale(s) {
+		this.transform.scale = s;
+		this.updateStyleTransform();
+	}
+
+	resetTransform() {
+		this.transform.reset();
+		this.updateStyleTransform();
+	}
+
+	updateStyleTransform() {
+		this.element.style.transform = this.transform.toStyle();
+	}
 }
 
 class Chapter {
-  constructor(pages) {
-    this.index = 0;
-    this.pages = pages;
-    this.loadedPages = [];
-  }
+	constructor(pages) {
+		this.index = 0;
+		this.pages = pages;
+		this.loadedPages = [];
+	}
 
-  getCurrentPage() {
-    return this.getPage(0);
-  }
+	currentPage() {
+		return this.getPage(this.index);
+	}
 
-  getPage(index) {
-    for (let i = this.loadedPages.length; i < index + 2; ++i) {
-      if (i < this.pages.length) {
-        this.loadedPages.push(
-          new Page(this.pages[i].src, this.pages[i].background),
-        );
-      }
-    }
-    return this.loadedPages[index];
-  }
+	nextPage() {
+		this.index = Math.min(this.index + 1, this.pages.length - 1);
+		return this.getPage(this.index);
+	}
 
-  nextPage() {
-    const newIndex = this.index + 1;
-    if (newIndex < this.pages.length) {
-      const currPage = this.getCurrentPage();
-      currPage.translate(-window.innerWidth, currPage.transform.translate.y);
-      this.index = newIndex;
-      return this.getPage(newIndex);
-    }
-  }
+	prevPage() {
+		this.index = Math.max(this.index - 1, 0);
+		return this.getPage(this.index);
+	}
 
-  prevPage() {
-    const newIndex = page.index - 1;
-    if (newIndex >= 0) {
-      const currPage = this.getCurrentPage();
-      currPage.translate(window.innerWidth, currPage.transform.translate.y);
-      this.index = newIndex;
-      return this.getPage(newIndex);
-    }
-  }
+	getPage(index) {
+		for (let i = this.loadedPages.length; i < index + 2; ++i) {
+			if (i < this.pages.length) {
+				this.loadedPages.push(
+					new Page(
+						this.pages[i].src,
+						this.pages[i].background,
+						new Transform(
+							new Vec2(i === 0 ? 0 : window.innerWidth * directionModifier, 0),
+							1,
+						),
+					),
+				);
+			}
+		}
+		return this.loadedPages[index];
+	}
+
+	isFirstPage() {
+		return this.index === 0;
+	}
+
+	isLastPage() {
+		return this.index === this.pages.length - 1;
+	}
 }
 
-const chapter = new Chapter(pages);
-
-console.log(chapter.getCurrentPage());
-
 const viewer = document.getElementById("viewer");
+const chapter = new Chapter(data.pages);
 
-const loadedPages = [];
-
-const page = {
-  index: 0,
-  element: viewer.appendChild(getPage(0)),
-  transform: {
-    scale: 1,
-    translate: { x: 0, y: 0 },
-  },
-};
-
-resetTranform();
-
-document.body.style.backgroundColor = pages[0].background;
-
-function getPage(index) {
-  for (let i = loadedPages.length; i < index + 2; ++i) {
-    if (i < pages.length) {
-      const img = new Image();
-      img.src = pages[i].src;
-      img.className = "image";
-      img.style.transform = `translate(${window.innerWidth}px, 0px)`;
-      img.addEventListener("transitionend", (e) => {
-        const rect = e.target.getBoundingClientRect();
-        if (
-          rect.bottom <= 0 ||
-          rect.top >= window.innerHeight ||
-          rect.right <= 0 ||
-          rect.left >= window.innerWidth
-        ) {
-          e.target.remove();
-        }
-      });
-      loadedPages.push(img);
-    }
-  }
-  return loadedPages[index];
+function nextPage() {
+	if (!chapter.isLastPage()) {
+		chapter
+			.currentPage()
+			.translateX(window.innerWidth * (-1 * directionModifier));
+		setPage(chapter.nextPage());
+	}
 }
 
 function prevPage() {
-  const newIndex = page.index - 1;
-  if (newIndex >= 0) {
-    page.transform.translate.x = window.innerWidth;
-    applyTransform();
-    page.element = viewer.appendChild(getPage(newIndex));
-    page.index = newIndex;
-    setTimeout(() => {
-      resetTranform();
-      document.body.style.backgroundColor = pages[newIndex].background;
-    }, 10);
-  }
+	if (!chapter.isFirstPage()) {
+		chapter.currentPage().translateX(window.innerWidth * directionModifier);
+		setPage(chapter.prevPage());
+	}
 }
 
-function nextPage() {
-  const newIndex = page.index + 1;
-  if (newIndex < pages.length) {
-    page.transform.translate.x = -window.innerWidth;
-    applyTransform();
-    page.element = viewer.appendChild(getPage(newIndex));
-    page.index = newIndex;
-    setTimeout(() => {
-      resetTranform();
-      document.body.style.backgroundColor = pages[newIndex].background;
-    }, 10);
-  }
+function setPage(page) {
+	viewer.appendChild(page.element);
+	setTimeout(() => {
+		page.resetTransform();
+		viewer.style.backgroundColor = page.background;
+	}, 10);
 }
 
-function resetTranform() {
-  page.transform.scale = 1;
-  page.transform.translate.x = 0;
-  page.transform.translate.y = 0;
-  page.element.classList.remove("dragging");
-  applyTransform();
-}
+setPage(chapter.currentPage());
 
-function applyTransform() {
-  page.element.style.transform = `translate(${page.transform.translate.x}px, ${page.transform.translate.y}px) scale(${page.transform.scale})`;
-}
-
-function distance(x1, y1, x2, y2) {
-  return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-}
-
-const start = { x: 0, y: 0 };
+let start = Vec2.zero();
 let isDragging = false;
+let pinch = {
+	distance: 0,
+	midpoint: Vec2.zero(),
+	transform: Transform.default(),
+};
+let prevTapTime = 0;
+let prevTapPos = Vec2.zero();
 
 viewer.addEventListener("mousedown", (e) => {
-  e.preventDefault();
-
-  start.x = e.clientX - page.transform.translate.x;
-  start.y = e.clientY - page.transform.translate.y;
-
-  isDragging = true;
-  page.element.classList.add("dragging");
+	e.preventDefault();
+	const page = chapter.currentPage();
+	start = Vec2.fromClient(e).sub(page.transform.translate);
+	isDragging = true;
+	page.element.classList.add("no-transition");
 });
 
 viewer.addEventListener("mousemove", (e) => {
-  if (isDragging) {
-    page.transform.translate.x = e.clientX - start.x;
-    page.transform.translate.y = e.clientY - start.y;
-    applyTransform();
-  }
+	if (isDragging) {
+		const page = chapter.currentPage();
+		page.transform.translate = Vec2.fromClient(e).sub(start);
+		page.updateStyleTransform();
+	}
 });
 
 viewer.addEventListener("mouseup", (e) => {
-  isDragging = false;
-  page.element.classList.remove("dragging");
+	const page = chapter.currentPage();
 
-  if (page.transform.scale === 1) {
-    resetTranform();
+	isDragging = false;
+	page.element.classList.remove("no-transition");
 
-    const deltaX = e.clientX - start.x;
-    if (Math.abs(deltaX) > 50) {
-      if (deltaX > 0) {
-        prevPage();
-      } else {
-        nextPage();
-      }
-    }
-  }
+	if (page.transform.scale === 1) {
+		page.resetTransform();
+
+		const deltaX = e.clientX - start.x;
+		if (Math.abs(deltaX) > 50) {
+			if (deltaX * directionModifier > 0) {
+				prevPage();
+			} else {
+				nextPage();
+			}
+		}
+	}
 });
 
 viewer.addEventListener("dblclick", (e) => {
-  e.preventDefault();
+	e.preventDefault();
 
-  if (page.transform.scale === 1) {
-    const rect = viewer.getBoundingClientRect();
+	const page = chapter.currentPage();
 
-    const prevScale = page.transform.scale;
-    page.transform.scale *= 2;
+	if (page.transform.scale === 1) {
+		const rect = Rect.fromDomRect(viewer.getBoundingClientRect());
+		const focus = Vec2.fromClient(e).sub(rect.center());
 
-    const scaleDiff = page.transform.scale - prevScale;
+		const newScale = page.transform.scale * 2;
 
-    page.transform.translate.x -=
-      ((e.clientX - rect.left - rect.width / 2 - page.transform.translate.x) *
-        scaleDiff) /
-      prevScale;
-    page.transform.translate.y -=
-      ((e.clientY - rect.top - rect.height / 2 - page.transform.translate.y) *
-        scaleDiff) /
-      prevScale;
+		page.transform.translate = page.transform.translate.sub(
+			focus
+				.sub(page.transform.translate)
+				.mul(newScale / page.transform.scale - 1),
+		);
+		page.transform.scale = newScale;
 
-    applyTransform();
-  } else {
-    resetTranform();
-  }
+		page.updateStyleTransform();
+	} else {
+		page.resetTransform();
+	}
 });
 
+let wheelTimeout = null;
 viewer.addEventListener("wheel", (e) => {
-  e.preventDefault();
+	e.preventDefault();
 
-  const dir = e.deltaY < 0 ? 1 : -1;
-  const prevScale = page.transform.scale;
-  page.transform.scale = Math.max(
-    1,
-    Math.min(5, page.transform.scale + dir * 0.1),
-  );
+	const page = chapter.currentPage();
 
-  if (page.transform.scale > 1) {
-    const rect = viewer.getBoundingClientRect();
-    const scaleDiff = page.transform.scale - prevScale;
+	const dir = e.deltaY < 0 ? 1 : -1;
+	const newScale = Math.max(0.1, Math.min(5, page.transform.scale + dir * 0.1));
 
-    page.transform.translate.x -=
-      ((e.clientX - rect.left - rect.width / 2 - page.transform.translate.x) *
-        scaleDiff) /
-      prevScale;
-    page.transform.translate.y -=
-      ((e.clientY - rect.top - rect.height / 2 - page.transform.translate.y) *
-        scaleDiff) /
-      prevScale;
+	const rect = Rect.fromDomRect(viewer.getBoundingClientRect());
+	const focus = Vec2.fromClient(e).sub(rect.center());
+	page.transform.translate = page.transform.translate.sub(
+		focus
+			.sub(page.transform.translate)
+			.mul(newScale / page.transform.scale - 1),
+	);
+	page.transform.scale = newScale;
 
-    applyTransform();
-  } else {
-    resetTranform();
-  }
-});
+	page.updateStyleTransform();
 
-const pinch = {
-  distance: 0,
-  midpoint: { x: 0, y: 0 },
-  transform: {
-    scale: 1,
-    translate: { x: 0, y: 0 },
-  },
-};
-
-viewer.addEventListener("touchstart", (e) => {
-  e.preventDefault();
-
-  page.element.classList.add("dragging");
-
-  if (e.touches.length === 1) {
-    const touch = e.touches[0];
-    start.x = touch.clientX - page.transform.translate.x;
-    start.y = touch.clientY - page.transform.translate.y;
-  } else if (e.touches.length === 2) {
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
-
-    pinch.distance = distance(
-      touch1.clientX,
-      touch1.clientY,
-      touch2.clientX,
-      touch2.clientY,
-    );
-    pinch.transform.scale = page.transform.scale;
-    pinch.transform.translate.x = page.transform.translate.x;
-    pinch.transform.translate.y = page.transform.translate.y;
-    pinch.midpoint.x = (touch1.clientX + touch2.clientX) / 2;
-    pinch.midpoint.y = (touch1.clientY + touch2.clientY) / 2;
-  }
-});
-
-viewer.addEventListener("touchmove", (e) => {
-  if (e.touches.length === 1) {
-    page.transform.translate.x = e.touches[0].clientX - start.x;
-    page.transform.translate.y = e.touches[0].clientY - start.y;
-    applyTransform();
-  } else if (e.touches.length === 2) {
-    const touch1 = e.touches[0];
-    const touch2 = e.touches[1];
-
-    const dist = distance(
-      touch1.clientX,
-      touch1.clientY,
-      touch2.clientX,
-      touch2.clientY,
-    );
-
-    const rect = viewer.getBoundingClientRect();
-
-    page.transform.scale = Math.min(
-      5,
-      pinch.transform.scale * (dist / pinch.distance),
-    );
-    const scaleDiff = page.transform.scale - pinch.transform.scale;
-
-    page.transform.translate.x =
-      pinch.transform.translate.x +
-      ((touch1.clientX + touch2.clientX) / 2 - pinch.midpoint.x) -
-      ((pinch.midpoint.x -
-        (rect.left + rect.width / 2) -
-        pinch.transform.translate.x) *
-        scaleDiff) /
-        pinch.transform.scale;
-
-    page.transform.translate.y =
-      pinch.transform.translate.y +
-      ((touch1.clientY + touch2.clientY) / 2 - pinch.midpoint.y) -
-      ((pinch.midpoint.y -
-        (rect.top + rect.height / 2) -
-        pinch.transform.translate.y) *
-        scaleDiff) /
-        pinch.transform.scale;
-
-    applyTransform();
-  }
-});
-
-let prevTap = 0;
-const lastTapPos = { x: 0, y: 0 };
-
-viewer.addEventListener("touchend", (e) => {
-  if (e.changedTouches.length === 1) {
-    const touch = e.changedTouches[0];
-
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - prevTap;
-    const distanceX = Math.abs(touch.clientX - lastTapPos.x);
-    const distanceY = Math.abs(touch.clientY - lastTapPos.y);
-    const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
-
-    prevTap = currentTime;
-    lastTapPos.x = touch.clientX;
-    lastTapPos.y = touch.clientY;
-
-    if (page.transform.scale === 1) {
-      resetTranform();
-
-      const deltaX = touch.clientX - start.x;
-      if (Math.abs(deltaX) > 50) {
-        if (deltaX > 0) {
-          prevPage();
-        } else {
-          nextPage();
-        }
-      }
-
-      if (tapLength < 200 && distance < 50) {
-        const rect = viewer.getBoundingClientRect();
-
-        const prevScale = page.transform.scale;
-        page.transform.scale *= 2;
-
-        const scaleDiff = page.transform.scale - prevScale;
-
-        page.transform.translate.x -=
-          ((touch.clientX -
-            rect.left -
-            rect.width / 2 -
-            page.transform.translate.x) *
-            scaleDiff) /
-          prevScale;
-        page.transform.translate.y -=
-          ((touch.clientY -
-            rect.top -
-            rect.height / 2 -
-            page.transform.translate.y) *
-            scaleDiff) /
-          prevScale;
-
-        applyTransform();
-
-        prevTap = 0;
-      }
-    } else if (page.transform.scale < 1) {
-      resetTranform();
-    } else if (page.transform.scale > 1) {
-      if (tapLength < 200 && distance < 50) {
-        resetTranform();
-        prevTap = 0;
-      }
-    }
-  }
-
-  if (e.touches.length === 1) {
-    const touch = e.touches[0];
-    start.x = touch.clientX - page.transform.translate.x;
-    start.y = touch.clientY - page.transform.translate.y;
-  }
+	clearTimeout(wheelTimeout);
+	wheelTimeout = setTimeout(() => {
+		if (page.transform.scale < 1) {
+			page.resetTransform();
+		}
+	}, 100);
 });
 
 document.addEventListener("mouseleave", () => {
-  isDragging = false;
-  resetTranform();
+	const page = chapter.currentPage();
+	isDragging = false;
+	page.element.classList.remove("no-transition");
+	if (page.transform.scale === 1) {
+		page.resetTransform();
+	}
+});
+
+viewer.addEventListener("touchstart", (e) => {
+	e.preventDefault();
+
+	const page = chapter.currentPage();
+
+	page.element.classList.add("no-transition");
+
+	if (e.touches.length === 1) {
+		start = Vec2.fromClient(e.touches[0]).sub(page.transform.translate);
+	} else if (e.touches.length === 2) {
+		const touch1 = Vec2.fromClient(e.touches[0]);
+		const touch2 = Vec2.fromClient(e.touches[1]);
+		pinch = {
+			distance: touch1.distance(touch2),
+			transform: page.transform.copy(),
+			midpoint: touch1.add(touch2).div(2),
+		};
+	}
+});
+
+viewer.addEventListener("touchmove", (e) => {
+	const page = chapter.currentPage();
+
+	if (e.touches.length === 1) {
+		page.translate(Vec2.fromClient(e.touches[0]).sub(start));
+	} else if (e.touches.length === 2) {
+		const touch1 = Vec2.fromClient(e.touches[0]);
+		const touch2 = Vec2.fromClient(e.touches[1]);
+
+		const rect = Rect.fromDomRect(viewer.getBoundingClientRect());
+		const focus = pinch.midpoint.sub(rect.center());
+
+		const dist = touch1.distance(touch2);
+		const midpoint = touch1.add(touch2).div(2);
+
+		const newScale = Math.min(
+			5,
+			pinch.transform.scale * (dist / pinch.distance),
+		);
+
+		page.transform.translate = pinch.transform.translate
+			.add(midpoint.sub(pinch.midpoint))
+			.sub(
+				focus
+					.sub(pinch.transform.translate)
+					.mul(newScale / pinch.transform.scale - 1),
+			);
+		page.transform.scale = newScale;
+
+		page.updateStyleTransform();
+	}
+});
+
+viewer.addEventListener("touchend", (e) => {
+	const page = chapter.currentPage();
+
+	if (e.changedTouches.length === 1) {
+		const touch = Vec2.fromClient(e.changedTouches[0]);
+		const dist = Math.abs(touch.distance(prevTapPos));
+		prevTapPos = touch;
+
+		const currentTime = Date.now();
+		const tapLength = currentTime - prevTapTime;
+		prevTapTime = currentTime;
+
+		if (page.transform.scale === 1) {
+			page.resetTransform();
+			page.element.classList.remove("no-transition");
+
+			const deltaX = touch.x - start.x;
+			if (Math.abs(deltaX) > 50) {
+				if (deltaX * directionModifier > 0) {
+					prevPage();
+				} else {
+					nextPage();
+				}
+			} else {
+				page.resetTransform();
+				page.element.classList.remove("no-transition");
+
+				if (tapLength < 200 && dist < 50) {
+					const rect = Rect.fromDomRect(viewer.getBoundingClientRect());
+					const focus = touch.sub(rect.center());
+
+					const newScale = page.transform.scale * 2;
+
+					page.transform.translate = page.transform.translate.sub(
+						focus
+							.sub(page.transform.translate)
+							.mul(newScale / page.transform.scale - 1),
+					);
+					page.transform.scale = newScale;
+
+					page.updateStyleTransform();
+
+					prevTapTime = 0;
+				}
+			}
+		} else if (page.transform.scale < 1) {
+			page.resetTransform();
+			page.element.classList.remove("no-transition");
+		} else if (page.transform.scale > 1) {
+			if (tapLength < 200 && dist < 50) {
+				page.resetTransform();
+				page.element.classList.remove("no-transition");
+				prevTapTime = 0;
+			}
+		}
+	}
+
+	if (e.touches.length === 1) {
+		start = Vec2.fromClient(e.touches[0]).sub(page.transform.translate);
+	}
 });
 
 document.addEventListener("touchstart", (e) => {
-  if (e.touches.length > 1) {
-    e.preventDefault();
-  }
+	if (e.touches.length > 1) {
+		e.preventDefault();
+	}
 });
 
 document.addEventListener("touchmove", (e) => {
-  if (e.touches.length > 1) {
-    e.preventDefault();
-  }
+	if (e.touches.length > 1) {
+		e.preventDefault();
+	}
 });
 
 document.addEventListener("touchcancel", () => {
-  resetTranform();
+	page.resetTransform();
+	page.element.classList.remove("no-transition");
 });
 
 document.addEventListener("keydown", (e) => {
-  switch (e.key) {
-    case "ArrowLeft": {
-      if (page.transform.scale !== 1) {
-        page.transform.translate.x += 100;
-        applyTransform();
-      } else {
-        prevPage();
-      }
-      break;
-    }
-    case "ArrowRight": {
-      if (page.transform.scale !== 1) {
-        page.transform.translate.x -= 100;
-        applyTransform();
-      } else {
-        nextPage();
-      }
-      break;
-    }
-    case "ArrowUp": {
-      if (page.transform.scale !== 1) {
-        page.transform.translate.y += 100;
-        applyTransform();
-      }
-      break;
-    }
-    case "ArrowDown": {
-      if (page.transform.scale !== 1) {
-        page.transform.translate.y -= 100;
-        applyTransform();
-      }
-      break;
-    }
-    case "+": {
-      page.transform.scale = Math.min(page.transform.scale + 0.25, 3);
-      applyTransform();
-      break;
-    }
-    case "-": {
-      page.transform.scale = Math.max(page.transform.scale - 0.25, 0.5);
-      applyTransform();
-      break;
-    }
-    case "0":
-      resetTranform();
-      break;
-  }
+	const page = chapter.currentPage();
+
+	switch (e.key) {
+		case "ArrowLeft": {
+			if (page.transform.scale !== 1) {
+				page.transform.translate.x += 100;
+				page.updateStyleTransform();
+			} else {
+				switch (data.direction) {
+					case "ltr":
+						prevPage();
+						break;
+					case "rtl":
+						nextPage();
+						break;
+					default:
+						prevPage();
+						break;
+				}
+			}
+			break;
+		}
+		case "ArrowRight": {
+			if (page.transform.scale !== 1) {
+				page.transform.translate.x -= 100;
+				page.updateStyleTransform();
+			} else {
+				switch (data.direction) {
+					case "ltr":
+						nextPage();
+						break;
+					case "rtl":
+						prevPage();
+						break;
+					default:
+						nextPage();
+						break;
+				}
+			}
+			break;
+		}
+		case "ArrowUp": {
+			if (page.transform.scale !== 1) {
+				page.transform.translate.y += 100;
+				page.updateStyleTransform();
+			}
+			break;
+		}
+		case "ArrowDown": {
+			if (page.transform.scale !== 1) {
+				page.transform.translate.y -= 100;
+				page.updateStyleTransform();
+			}
+			break;
+		}
+		case "+": {
+			page.transform.scale = Math.min(page.transform.scale + 0.25, 3);
+			page.updateStyleTransform();
+			break;
+		}
+		case "-": {
+			page.transform.scale = Math.max(page.transform.scale - 0.25, 0.5);
+			page.updateStyleTransform();
+			break;
+		}
+		case "0":
+			page.updateStyleTransform();
+			break;
+	}
 });
 
 document.addEventListener("contextmenu", (e) => {
-  if (e.target.tagName === "IMG") {
-    e.preventDefault();
-  }
+	if (e.target.tagName === "IMG") {
+		e.preventDefault();
+	}
 });
 
 document.addEventListener("touchstart", (e) => {
-  if (e.target.tagName === "IMG") {
-    e.preventDefault();
-  }
+	if (e.target.tagName === "IMG") {
+		e.preventDefault();
+	}
 });
